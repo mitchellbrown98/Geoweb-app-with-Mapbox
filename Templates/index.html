@@ -1,26 +1,13 @@
 <!DOCTYPE html>
 <html>
   <head>
-       <title>ENGO 551 Lab 2</title>
+       <title>ENGO 551 Lab 3</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta charset="utf-8">
 
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"></script>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-<script src='https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js'></script>
-
-<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-<script src="https://unpkg.com/gijgo@1.9.13/js/gijgo.min.js" type="text/javascript"></script>
-<link href="https://unpkg.com/gijgo@1.9.13/css/gijgo.min.css" rel="stylesheet" type="text/css"/>
 
 <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
 <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css' rel='stylesheet' />
@@ -45,12 +32,6 @@
           <div id="map"></div>
 
 <script>
-$('#datepicker').datepicker({ format: 'yyyy-mm-dd' });
-$('#datepicker2').datepicker({ format: 'yyyy-mm-dd' });
-var totalresults=0;
-
-//Hide error msg by default
-$("p3").hide();
 
 //Initialize map, set view to center of calgary if location permissions //denied
 var map = L.map('map').setView([51.044, -114.07],11);
@@ -58,9 +39,18 @@ map.locate({setView: true, maxZoom: 11});
 // Add fullscreen control
 map.addControl(new L.Control.Fullscreen());
 
-//Add tilelayer to map
-var original = L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png?api_key=30b6c838-4624-47eb-964a-87fcc2e3eb39', {maxZoom: 20, attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'}).addTo(map);
+//Add base tilelayer to map
+var original = L.tileLayer('https://api.mapbox.com/styles/v1/{username}/{style_id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+    maxZoom: 18,
+    username: '{{ info[0] }}',
+    style_id: '{{ info[2] }}',
+    tileSize: 512,
+    zoomOffset: -1,
+    accessToken: '{{ info[3] }}'
+}).addTo(map);
 
+//Add tilelayer w/ traffic dataset
 var streets = L.tileLayer('https://api.mapbox.com/styles/v1/{username}/{style_id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
     maxZoom: 18,
@@ -68,75 +58,15 @@ var streets = L.tileLayer('https://api.mapbox.com/styles/v1/{username}/{style_id
     style_id: '{{ info[1] }}',
     tileSize: 512,
     zoomOffset: -1,
-    accessToken: '{{ info[2] }}'
+    accessToken: '{{ info[3] }}'
 });
 
 var baseMaps = {
-"Lab 2": original,
-"Lab 3": streets
+"Map": original,
+"Traffic Incidents": streets
 };
 
 var layerscontrol = L.control.layers(baseMaps).addTo(map);
-
-//Create cluster groups and add settings
-    var markerCollection = L.markerClusterGroup({
-      spiderfyOnMaxZoom: true,
-	    showCoverageOnHover: false,
-      disableClusteringAtZoom: 21
-    });
-
-  //remove and clear layers if new data comes from search
-if (markerCollection != undefined) {
-     markerCollection.clearLayers();
-     map.removeLayer(markerCollection);
-};
-
-//Import all geojson items and add to layer if they have a geometry type!
-{% for dict_item in rep2 %}
-  {% if dict_item['geometry']['type'] is defined %}
-        var geojsonFeature= { "type": "{{dict_item['type']}}",
-          "properties": {
-            "Issued": "{{dict_item['properties']['issueddate']}}".slice(0, 10),
-            "WorkClassGroup": "{{dict_item['properties']['workclassgroup']}}",
-            "Contractor": "{{dict_item['properties']['contractorname']}}",
-            "Community": "{{dict_item['properties']['communityname']}}",
-            "Address": "{{dict_item['properties']['originaladdress']}}"
-          },
-          "geometry":{
-            "type": "{{dict_item['geometry']['type']}}",
-            "coordinates": {{dict_item['geometry']['coordinates']}}
-          }
-        };
-
-      var geo =  L.geoJSON(geojsonFeature, {
-          onEachFeature: onEachFeature
-        });
-      markerCollection.addLayer(geo);
-  {% endif %}
-{% endfor %}
-
-//Add cluster layer to map and determine total number of results to display
-totalresults = markerCollection.getLayers().length;
-document.getElementById("results").innerHTML = totalresults;
-map.addLayer(markerCollection);
-
-
-//Function to bind popup to each geojson feature
-function onEachFeature(feature, layer) {
-        layer.bindPopup('<b>Issued: </b>'  + feature.properties.Issued + '<br><b>WorkClassGroup: </b>' + feature.properties.WorkClassGroup +
-                        '<br><b>Contractor: </b>' + feature.properties.Contractor + '<br><b>Community: </b>' + feature.properties.Community +
-                        '<br><b>Address: </b>' + feature.properties.Address);
-}
-
-//Function used to check if the filter dates are correct
-  function checkdate (){
-    let d1 = $( "#datepicker" ).datepicker().val()
-    let d2 = $( "#datepicker2" ).datepicker().val()
-      if (d1 >= d2){
-        $("p3").show();
-        event.preventDefault();
-      }
-    }
 
 
   </script>
