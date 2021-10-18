@@ -1,3 +1,5 @@
+In this project, I am using a styled vector tileset hosted on Mapbox with my web mapping application developed in a previous project. Users can load and visualize a different map layer (e.g., a Mapbox style) from my Mapbox account. 
+
 application.py:
 There is only 1 route needed for this lab
 
