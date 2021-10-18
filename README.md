@@ -1,7 +1,7 @@
 In this project, I am using a styled vector tileset hosted on Mapbox with my web mapping application developed in a previous project. Users can load and visualize a different map layer (e.g., a Mapbox style) from my Mapbox account. 
 
 application.py:
-There is only 1 route needed for this lab
+There is only 1 route needed for this project
 
 1. `@app.route("/")` 
 	- This route passes the username, style_ids, and access token for the Mapbox tile layers, and renders the index.html page.
